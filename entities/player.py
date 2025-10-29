@@ -41,6 +41,11 @@ class Player(pygame.sprite.Sprite):
         self.iframes_frames = 30
         self._iframes_counter = 0
 
+        # Ammo
+        self.mag_capacity = 10
+        self.ammo_in_mag = self.mag_capacity
+        self.reserve_ammo = 50
+
     def handle_input(self, keys: pygame.key.ScancodeWrapper) -> None:
         # Horizontal movement
         move_dir = 0
@@ -127,7 +132,7 @@ class Player(pygame.sprite.Sprite):
                 self.on_ground = True
 
     def can_shoot(self) -> bool:
-        return self._cooldown_counter == 0
+        return self._cooldown_counter == 0 and self.ammo_in_mag > 0
 
     def shoot(self, bullets_group: pygame.sprite.Group) -> None:
         if not self.can_shoot():
@@ -140,5 +145,16 @@ class Player(pygame.sprite.Sprite):
         bullet = Bullet(bx, by, direction=self.facing)
         bullets_group.add(bullet)
         self._cooldown_counter = self.shoot_cooldown_frames
+        self.ammo_in_mag = max(0, self.ammo_in_mag - 1)
+
+    def reload(self) -> None:
+        if self.ammo_in_mag >= self.mag_capacity:
+            return
+        to_fill = self.mag_capacity - self.ammo_in_mag
+        taken = min(to_fill, self.reserve_ammo)
+        if taken <= 0:
+            return
+        self.ammo_in_mag += taken
+        self.reserve_ammo -= taken
 
 

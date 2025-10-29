@@ -5,8 +5,16 @@ import pygame
 
 class HUD:
     def __init__(self) -> None:
-        self.font_small = pygame.font.Font(None, 20)
-        self.font_medium = pygame.font.Font(None, 28)
+        # Lazy import freetype; if unavailable, fall back to no-text mode
+        self.font_small = None
+        self.font_medium = None
+        try:
+            import pygame.freetype as ft
+            self.font_small = ft.Font(None, 20)
+            self.font_medium = ft.Font(None, 28)
+        except Exception:
+            self.font_small = None
+            self.font_medium = None
 
     def draw(self, surface: pygame.Surface, *, hp: int, max_hp: int, ammo_text: str, score: int) -> None:
         # Health bar
@@ -19,12 +27,11 @@ class HUD:
         ratio = max(0.0, min(1.0, hp / max_hp if max_hp else 0))
         pygame.draw.rect(surface, (220, 60, 60), (x, y, int(bar_w * ratio), bar_h))
 
-        # Ammo
-        ammo_surf = self.font_medium.render(f"Ammo: {ammo_text}", True, (240, 240, 240))
-        surface.blit(ammo_surf, (10, 30))
-
-        # Score
-        score_surf = self.font_medium.render(f"Score: {score}", True, (240, 240, 240))
-        surface.blit(score_surf, (10, 54))
+        # Ammo/Score text (if font available)
+        if self.font_medium is not None:
+            ammo_surf, _ = self.font_medium.render(f"Ammo: {ammo_text}", (240, 240, 240))
+            surface.blit(ammo_surf, (10, 30))
+            score_surf, _ = self.font_medium.render(f"Score: {score}", (240, 240, 240))
+            surface.blit(score_surf, (10, 54))
 
 
