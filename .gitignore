@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# OS files
+.DS_Store
+
+# Pygame assets (keep directories, ignore large binaries by pattern if needed)
+assets/**/*.psd
+assets/**/*.xcf
+
+# Logs
+*.log
+
+
