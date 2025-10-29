@@ -35,6 +35,12 @@ class Player(pygame.sprite.Sprite):
         self.shoot_cooldown_frames = 10
         self._cooldown_counter = 0
 
+        # Health
+        self.max_hp = 5
+        self.hp = self.max_hp
+        self.iframes_frames = 30
+        self._iframes_counter = 0
+
     def handle_input(self, keys: pygame.key.ScancodeWrapper) -> None:
         # Horizontal movement
         move_dir = 0
@@ -62,29 +68,63 @@ class Player(pygame.sprite.Sprite):
             if abs(self.velocity.x) < 0.05:
                 self.velocity.x = 0
 
-    def simple_floor_collision(self) -> None:
-        # Temporary: treat bottom of screen as ground
-        ground_y = S.HEIGHT - 32  # arbitrary floor height
-        if self.rect.bottom >= ground_y:
-            self.rect.bottom = ground_y
-            self.position.y = self.rect.y
-            self.velocity.y = 0
-            self.on_ground = True
+    def take_damage(self, amount: int) -> None:
+        if self._iframes_counter > 0 or amount <= 0:
+            return
+        self.hp = max(0, self.hp - amount)
+        self._iframes_counter = self.iframes_frames
 
-    def update(self, keys: pygame.key.ScancodeWrapper) -> None:
+    def _collide_axis(self, solids: list[pygame.Rect], axis: str) -> None:
+        hits = [r for r in solids if self.rect.colliderect(r)]
+        for tile in hits:
+            if axis == "x":
+                if self.velocity.x > 0:
+                    self.rect.right = tile.left
+                elif self.velocity.x < 0:
+                    self.rect.left = tile.right
+                self.position.x = self.rect.x
+                self.velocity.x = 0
+            else:  # y axis
+                if self.velocity.y > 0:
+                    self.rect.bottom = tile.top
+                    self.on_ground = True
+                elif self.velocity.y < 0:
+                    self.rect.top = tile.bottom
+                self.position.y = self.rect.y
+                self.velocity.y = 0
+
+    def update(self, keys: pygame.key.ScancodeWrapper, solids: list[pygame.Rect] | None = None) -> None:
         self.handle_input(keys)
         self.apply_gravity()
         self.apply_friction()
 
         if self._cooldown_counter > 0:
             self._cooldown_counter -= 1
+        if self._iframes_counter > 0:
+            self._iframes_counter -= 1
 
-        # Integrate velocity
-        self.position += self.velocity
-        self.rect.topleft = (round(self.position.x), round(self.position.y))
+        # Integrate with axis separation and resolve collisions if solids provided
+        self.on_ground = False
 
-        # Basic floor collision keeps player grounded
-        self.simple_floor_collision()
+        # Move X
+        self.position.x += self.velocity.x
+        self.rect.x = round(self.position.x)
+        if solids:
+            self._collide_axis(solids, "x")
+
+        # Move Y
+        self.position.y += self.velocity.y
+        self.rect.y = round(self.position.y)
+        if solids:
+            self._collide_axis(solids, "y")
+        else:
+            # Fallback: simple bottom-of-screen floor
+            ground_y = S.HEIGHT - 32
+            if self.rect.bottom >= ground_y:
+                self.rect.bottom = ground_y
+                self.position.y = self.rect.y
+                self.velocity.y = 0
+                self.on_ground = True
 
     def can_shoot(self) -> bool:
         return self._cooldown_counter == 0
