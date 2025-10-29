@@ -5,6 +5,7 @@ import pygame
 import settings as S
 from entities.player import Player
 from entities.bullet import Bullet
+from levels.level import Level
 
 
 def main() -> None:
@@ -13,6 +14,7 @@ def main() -> None:
     pygame.display.set_caption(S.TITLE)
     clock = pygame.time.Clock()
 
+    level = Level.from_csv("levels/level1.csv")
     player = Player(100, 100)
     bullets = pygame.sprite.Group()
     all_sprites = pygame.sprite.Group(player)
@@ -32,6 +34,7 @@ def main() -> None:
         bullets.update()
 
         screen.fill(S.GRAY)
+        level.draw(screen)
         all_sprites.draw(screen)
         bullets.draw(screen)
 
