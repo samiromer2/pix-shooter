@@ -7,6 +7,14 @@ from entities.bullet import Bullet
 from entities.player import Player
 
 
+class KeyState:
+    def __init__(self, pressed=None):
+        self.pressed = set(pressed or [])
+
+    def __getitem__(self, key):
+        return 1 if key in self.pressed else 0
+
+
 def setup_module(module):
     pygame.init()
     pygame.display.set_mode((1, 1))
@@ -42,7 +50,7 @@ def test_player_shoot_spawns_bullet_and_respects_cooldown():
 
     # After enough updates, can shoot again
     for _ in range(player.shoot_cooldown_frames):
-        player.update(pygame.key.ScancodeWrapper([0] * 512))
+        player.update(KeyState())
     assert player.can_shoot() is True
     player.shoot(bullets)
     assert len(bullets.sprites()) == 2
