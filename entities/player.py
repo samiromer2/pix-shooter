@@ -5,6 +5,8 @@ from dataclasses import dataclass
 import pygame
 
 import settings as S
+from utils.sprites import get_sprite_loader
+from utils.animations import AnimationController
 
 
 @dataclass
@@ -21,10 +23,30 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.physics: Physics = physics or Physics()
 
-        # Simple placeholder sprite (rectangle)
-        self.image = pygame.Surface((32, 48))
-        self.image.fill(S.BLUE)
+        # Load animation controller
+        self.sprite_loader = get_sprite_loader()
+        self.anim_controller = self.sprite_loader.get_player_animation_controller()
+        self.current_state = "idle"
+        self._scale_factor = None  # Cache scale for all frames
+        
+        # Initialize first frame and determine scale
+        sprite = self.anim_controller.get_frame()
+        if sprite:
+            w, h = sprite.get_size()
+            if w > 64 or h > 96:
+                self._scale_factor = min(64 / w, 96 / h)
+            else:
+                self._scale_factor = 1.0
+            if self._scale_factor != 1.0:
+                sprite = pygame.transform.scale(sprite, (int(w * self._scale_factor), int(h * self._scale_factor)))
+            self.image = sprite
+        else:
+            # Fallback placeholder
+            self.image = pygame.Surface((32, 48))
+            self.image.fill(S.BLUE)
+            self._scale_factor = 1.0
         self.rect = self.image.get_rect(topleft=(x, y))
+        self._base_image = self.image.copy()  # Store for flipping
 
         # Sub-pixel precise position and velocity
         self.position = pygame.Vector2(self.rect.x, self.rect.y)
@@ -98,6 +120,45 @@ class Player(pygame.sprite.Sprite):
                 self.position.y = self.rect.y
                 self.velocity.y = 0
 
+    def _update_sprite(self, dt: float = 0.016) -> None:
+        """Update sprite based on current state and animate frames."""
+        state = "idle"
+        if not self.on_ground:
+            state = "jump"
+        elif abs(self.velocity.x) > 2:
+            state = "run"
+        elif abs(self.velocity.x) > 0:
+            state = "walk"
+        if self._cooldown_counter > 0:
+            state = "attack"
+        
+        # Switch animation if state changed
+        if state != self.current_state:
+            self.current_state = state
+            self.anim_controller.set_animation(state)
+        
+        # Update animation frame
+        self.anim_controller.update(dt)
+        
+        # Get current frame and scale if needed
+        sprite = self.anim_controller.get_frame()
+        if sprite:
+            if self._scale_factor and self._scale_factor != 1.0:
+                w, h = sprite.get_size()
+                sprite = pygame.transform.scale(sprite, (int(w * self._scale_factor), int(h * self._scale_factor)))
+            self._base_image = sprite
+        else:
+            # Fallback if animation failed
+            self._base_image = pygame.Surface((32, 48))
+            self._base_image.fill(S.BLUE)
+        
+        # Flip sprite based on facing direction
+        self.image = pygame.transform.flip(self._base_image, self.facing < 0, False)
+        # Keep rect size consistent
+        old_center = self.rect.center
+        self.rect = self.image.get_rect()
+        self.rect.center = old_center
+    
     def update(self, keys: pygame.key.ScancodeWrapper, solids: list[pygame.Rect] | None = None) -> None:
         self.handle_input(keys)
         self.apply_gravity()
@@ -130,6 +191,9 @@ class Player(pygame.sprite.Sprite):
                 self.position.y = self.rect.y
                 self.velocity.y = 0
                 self.on_ground = True
+        
+        # Update sprite appearance (dt is ~1/60 for 60 FPS)
+        self._update_sprite(1.0 / 60.0)
 
     def can_shoot(self) -> bool:
         return self._cooldown_counter == 0 and self.ammo_in_mag > 0
