@@ -62,11 +62,23 @@ class Player(pygame.sprite.Sprite):
         self.hp = self.max_hp
         self.iframes_frames = 30
         self._iframes_counter = 0
+        self.hp_upgrades = 0  # Track health upgrades
 
         # Ammo
         self.mag_capacity = 10
         self.ammo_in_mag = self.mag_capacity
         self.reserve_ammo = 50
+        self.ammo_upgrades = 0  # Track ammo upgrades
+        
+        # Movement upgrades
+        self.speed_multiplier = 1.0  # Speed upgrade multiplier
+        self.jump_multiplier = 1.0  # Jump upgrade multiplier
+        
+        # Weapon system (Bitcoin mining tools)
+        from entities.weapon import Weapon, Pistol
+        self.weapons: list[Weapon] = [Pistol()]  # Start with Hash Power
+        self.current_weapon_index = 0
+        self.weapon_switch_cooldown = 0
 
     def handle_input(self, keys: pygame.key.ScancodeWrapper) -> None:
         # Horizontal movement
@@ -76,18 +88,38 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             move_dir += 1
 
-        self.velocity.x = move_dir * self.physics.move_speed
+        self.velocity.x = move_dir * self.physics.move_speed * self.speed_multiplier
         if move_dir != 0:
             self.facing = 1 if move_dir > 0 else -1
 
-        # Jump (only if on ground)
+        # Jump (only if on ground) - with jump upgrade
         if (keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]) and self.on_ground:
-            self.velocity.y = self.physics.jump_velocity
+            self.velocity.y = self.physics.jump_velocity * self.jump_multiplier
             self.on_ground = False
 
     def apply_gravity(self) -> None:
         if self.velocity.y < self.physics.max_fall_speed:
             self.velocity.y += self.physics.gravity
+    
+    def upgrade_health(self) -> None:
+        """Upgrade max health."""
+        self.max_hp += 1
+        self.hp = self.max_hp  # Restore to new max
+        self.hp_upgrades += 1
+    
+    def upgrade_ammo(self) -> None:
+        """Upgrade magazine capacity."""
+        self.mag_capacity += 2
+        self.ammo_in_mag = self.mag_capacity  # Fill new capacity
+        self.ammo_upgrades += 1
+    
+    def upgrade_speed(self) -> None:
+        """Upgrade movement speed."""
+        self.speed_multiplier += 0.1
+    
+    def upgrade_jump(self) -> None:
+        """Upgrade jump height."""
+        self.jump_multiplier += 0.15
 
     def apply_friction(self) -> None:
         if self.on_ground and abs(self.velocity.x) > 0:
@@ -159,7 +191,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = old_center
     
-    def update(self, keys: pygame.key.ScancodeWrapper, solids: list[pygame.Rect] | None = None) -> None:
+    def update(self, keys: pygame.key.ScancodeWrapper, solids: list[pygame.Rect] | None = None, moving_platforms: list | None = None) -> None:
         self.handle_input(keys)
         self.apply_gravity()
         self.apply_friction()
@@ -168,6 +200,22 @@ class Player(pygame.sprite.Sprite):
             self._cooldown_counter -= 1
         if self._iframes_counter > 0:
             self._iframes_counter -= 1
+        if self.weapon_switch_cooldown > 0:
+            self.weapon_switch_cooldown -= 1
+
+        # Check if on a moving platform
+        platform_velocity = pygame.Vector2(0, 0)
+        if moving_platforms:
+            for platform in moving_platforms:
+                # Check if player is on top of platform
+                if (self.rect.bottom <= platform.rect.top + 5 and
+                    self.rect.right > platform.rect.left and
+                    self.rect.left < platform.rect.right):
+                    platform_velocity = platform.get_velocity()
+                    # Move player with platform
+                    self.position.x += platform_velocity.x
+                    self.position.y += platform_velocity.y
+                    break
 
         # Integrate with axis separation and resolve collisions if solids provided
         self.on_ground = False
@@ -196,20 +244,55 @@ class Player(pygame.sprite.Sprite):
         self._update_sprite(1.0 / 60.0)
 
     def can_shoot(self) -> bool:
-        return self._cooldown_counter == 0 and self.ammo_in_mag > 0
+        """Check if player can shoot with current weapon."""
+        if self._cooldown_counter > 0:
+            return False
+        if not self.weapons or self.current_weapon_index >= len(self.weapons):
+            return False
+        weapon = self.weapons[self.current_weapon_index]
+        return self.ammo_in_mag >= weapon.get_ammo_cost()
 
-    def shoot(self, bullets_group: pygame.sprite.Group) -> None:
+    def shoot(self, bullets_group: pygame.sprite.Group) -> bool:
+        """Shoot using current weapon. Returns True if shot was fired, False otherwise."""
         if not self.can_shoot():
-            return
+            return False
+        
+        weapon = self.weapons[self.current_weapon_index]
+        
         # Spawn bullet from player's mid-body
-        from entities.bullet import Bullet
-
         bx = self.rect.centerx + (self.facing * 20)
         by = self.rect.centery
-        bullet = Bullet(bx, by, direction=self.facing)
-        bullets_group.add(bullet)
-        self._cooldown_counter = self.shoot_cooldown_frames
-        self.ammo_in_mag = max(0, self.ammo_in_mag - 1)
+        
+        # Use weapon's shoot method
+        if weapon.shoot(bx, by, self.facing, bullets_group):
+            self._cooldown_counter = weapon.fire_rate
+            self.ammo_in_mag = max(0, self.ammo_in_mag - weapon.get_ammo_cost())
+            return True
+        return False
+    
+    def switch_weapon(self, direction: int = 1) -> None:
+        """Switch to next/previous weapon."""
+        if self.weapon_switch_cooldown > 0:
+            return
+        if len(self.weapons) <= 1:
+            return
+        
+        self.current_weapon_index = (self.current_weapon_index + direction) % len(self.weapons)
+        self.weapon_switch_cooldown = 10  # Prevent rapid switching
+    
+    def add_weapon(self, weapon) -> None:
+        """Add a weapon to inventory."""
+        # Don't add duplicates
+        for w in self.weapons:
+            if w.name == weapon.name:
+                return
+        self.weapons.append(weapon)
+    
+    def get_current_weapon(self):
+        """Get the currently equipped weapon."""
+        if not self.weapons or self.current_weapon_index >= len(self.weapons):
+            return None
+        return self.weapons[self.current_weapon_index]
 
     def reload(self) -> None:
         if self.ammo_in_mag >= self.mag_capacity:

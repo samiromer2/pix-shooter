@@ -1,118 +1,118 @@
 # 🎮 Pixel Shooter Platformer — Pygame Roadmap
 
 ## 🚀 Phase 1: Project Setup
-- [ ] Create project folder structure  
-  - [ ] `/assets/sprites`
-  - [ ] `/assets/tiles`
-  - [ ] `/assets/sounds`
-  - [ ] `/entities`
-  - [ ] `/levels`
-  - [ ] `/ui`
-- [ ] Setup virtual environment  
-- [ ] Install Pygame  
-- [ ] Create `main.py` entry file  
-- [ ] Create `settings.py` for constants (screen size, FPS, colors)  
-- [ ] Create basic game loop (init, events, update, draw, quit)
+- [x] Create project folder structure  
+  - [x] `/assets/sprites`
+  - [x] `/assets/tiles`
+  - [x] `/assets/sounds`
+  - [x] `/entities`
+  - [x] `/levels`
+  - [x] `/ui`
+- [x] Setup virtual environment  
+- [x] Install Pygame  
+- [x] Create `main.py` entry file  
+- [x] Create `settings.py` for constants (screen size, FPS, colors)  
+- [x] Create basic game loop (init, events, update, draw, quit)
 
 ---
 
 ## 🧱 Phase 2: Core Player Mechanics
-- [ ] Create `player.py` class  
-  - [ ] Load player sprite  
-  - [ ] Implement movement (left/right)  
-  - [ ] Add jumping with gravity  
-  - [ ] Add friction and collision with platforms  
-  - [ ] Add shooting bullets (basic projectile)  
-  - [ ] Add health system (HP)  
-  - [ ] Add respawn or death logic  
-- [ ] Add animations (idle, run, jump, shoot)
+- [x] Create `player.py` class  
+  - [x] Load player sprite  
+  - [x] Implement movement (left/right)  
+  - [x] Add jumping with gravity  
+  - [x] Add friction and collision with platforms  
+  - [x] Add shooting bullets (basic projectile)  
+  - [x] Add health system (HP)  
+  - [x] Add respawn or death logic  
+- [x] Add animations (idle, run, jump, shoot)
 
 ---
 
 ## 🧩 Phase 3: Level System
-- [ ] Implement tilemap system  
-  - [ ] Use a 2D list or load `.csv` from Tiled  
-  - [ ] Draw tiles from tile spritesheet  
-  - [ ] Detect collisions with player & enemies  
-- [ ] Add background layer  
-- [ ] Add parallax scrolling (optional)  
-- [ ] Create Level 1 as test map  
+- [x] Implement tilemap system  
+  - [x] Use a 2D list or load `.csv` from Tiled  
+  - [x] Draw tiles from tile spritesheet  
+  - [x] Detect collisions with player & enemies  
+- [x] Add background layer  
+- [x] Add parallax scrolling (optional)  
+- [x] Create Level 1 as test map (and Level 2, Level 3)  
 
 ---
 
 ## 💀 Phase 4: Enemies
-- [ ] Create `enemy.py` class  
-  - [ ] Walk patrol AI (left/right)  
-  - [ ] Detect player (line of sight or radius)  
-  - [ ] Shoot or chase player  
-  - [ ] Take damage and die  
-- [ ] Add enemy spawn points per level  
-- [ ] Add simple enemy animation  
+- [x] Create `enemy.py` class  
+  - [x] Walk patrol AI (left/right)  
+  - [x] Detect player (line of sight or radius)  
+  - [x] Shoot or chase player  
+  - [x] Take damage and die  
+- [x] Add enemy spawn points per level  
+- [x] Add simple enemy animation  
 
 ---
 
 ## 🔫 Phase 5: Weapons & Projectiles
-- [ ] Create `weapon.py` base class  
-- [ ] Add multiple weapon types:
-  - [ ] Pistol (default)  
-  - [ ] Shotgun (spread)  
-  - [ ] Laser (fast projectile)  
-  - [ ] Rocket (explosion effect)  
-- [ ] Add pickup / weapon switch system  
-- [ ] Add ammo system  
-- [ ] Add muzzle flash or particle effects  
+- [x] Create `weapon.py` base class  
+- [x] Add multiple weapon types:
+  - [x] Pistol (default) - basic bullet exists  
+  - [x] Shotgun (spread)  
+  - [x] Laser (fast projectile)  
+  - [x] Rocket (explosion effect)  
+- [x] Add pickup / weapon switch system  
+- [x] Add ammo system (magazine + reserve ammo implemented)  
+- [x] Add muzzle flash or particle effects (muzzle flash particles implemented)  
 
 ---
 
 ## 🧭 Phase 6: UI & Game States
-- [ ] Create main menu (Start, Quit)  
-- [ ] Create pause menu  
-- [ ] Create HUD  
-  - [ ] Health bar  
-  - [ ] Ammo counter  
-  - [ ] Score display  
-- [ ] Create game over screen  
-- [ ] Create level complete screen  
+- [x] Create main menu (Start, Quit)  
+- [x] Create pause menu  
+- [x] Create HUD  
+  - [x] Health bar  
+  - [x] Ammo counter  
+  - [x] Score display  
+- [x] Create game over screen  
+- [x] Create level complete screen  
 
 ---
 
 ## 🧠 Phase 7: Gameplay & Level Design
-- [ ] Design 3–5 levels  
-- [ ] Add checkpoints or save system  
-- [ ] Add traps (spikes, lava, lasers)  
-- [ ] Add moving platforms  
-- [ ] Add power-ups (health, ammo, shield, speed)  
-- [ ] Add collectibles (coins, keys, artifacts)  
+- [x] Design 3–5 levels (3 levels created)  
+- [x] Add checkpoints or save system  
+- [x] Add traps (spikes, lava, lasers) - spikes and lava implemented  
+- [x] Add moving platforms  
+- [x] Add power-ups (health, ammo, shield, speed) - ammo, health, and shield pickups implemented  
+- [x] Add collectibles (coins, keys, artifacts) - coins and keys implemented  
 
 ---
 
 ## 💣 Phase 8: Boss & Progression (optional)
-- [ ] Create boss entity  
-  - [ ] Multi-phase behavior  
-  - [ ] Projectile patterns  
-- [ ] Add shop or upgrade screen  
-  - [ ] Upgrade weapons  
-  - [ ] Increase health or jump height  
-- [ ] Add XP or coin-based progression  
+- [x] Create boss entity  
+  - [x] Multi-phase behavior  
+  - [x] Projectile patterns  
+- [x] Add shop or upgrade screen  
+  - [x] Upgrade health, ammo, speed, jump  
+  - [x] Increase health or jump height  
+- [x] Add XP or coin-based progression - coins collected and spent in shop  
 
 ---
 
 ## 🎨 Phase 9: Polish & Aesthetics
-- [ ] Add particle effects (dust, bullet impacts, explosions)  
-- [ ] Add screen shake when firing heavy weapons  
+- [x] Add particle effects (dust, bullet impacts, explosions)  
+- [x] Add screen shake when firing heavy weapons  
 - [ ] Add lighting or glow effects (optional shaders)  
-- [ ] Add sound effects for shooting, jumping, damage  
-- [ ] Add background music (looping soundtrack)  
-- [ ] Add pause blur or fade transitions  
-- [ ] Add pixel-perfect camera following player  
+- [x] Add sound effects for shooting, jumping, damage  
+- [x] Add background music (looping soundtrack)  
+- [x] Add pause blur or fade transitions  
+- [x] Add pixel-perfect camera following player  
 
 ---
 
 ## 🧰 Phase 10: Optimization & Packaging
-- [ ] Optimize sprite loading (use sprite sheets)  
-- [ ] Limit FPS, cap updates  
+- [x] Optimize sprite loading (use sprite sheets) - sprite loading system exists  
+- [x] Limit FPS, cap updates (60 FPS in settings)  
 - [ ] Test on multiple resolutions  
-- [ ] Fix collisions & edge cases  
+- [x] Fix collisions & edge cases - collision system implemented  
 - [ ] Package game with `pyinstaller` or `briefcase`  
 - [ ] Create splash screen and logo  
 - [ ] Export demo build  

@@ -43,6 +43,15 @@ class Enemy(pygame.sprite.Sprite):
         # Health
         self.max_hp = 2
         self.hp = self.max_hp
+        
+        # AI behavior
+        self.detection_radius = 200  # Distance to detect player
+        self.chase_speed = 3.0  # Speed when chasing player
+        self.patrol_speed = speed  # Original patrol speed
+        self.shoot_range = 150  # Distance to start shooting
+        self.shoot_cooldown_frames = 60  # Frames between shots
+        self._shoot_cooldown = 0
+        self.player_target = None  # Reference to player when detected
 
     def take_damage(self, amount: int) -> None:
         if amount <= 0:
@@ -70,14 +79,87 @@ class Enemy(pygame.sprite.Sprite):
                 self.position.y = self.rect.y
                 self.velocity.y = 0
 
-    def update(self, _keys, solids: list[pygame.Rect] | None = None) -> None:
-        # Patrol AI: flip direction at bounds
-        if self.rect.left <= self.left_bound:
-            self.velocity.x = abs(self.velocity.x)
-            self.facing = 1
-        elif self.rect.right >= self.right_bound:
-            self.velocity.x = -abs(self.velocity.x)
-            self.facing = -1
+    def detect_player(self, player) -> bool:
+        """Check if player is within detection radius."""
+        if not player or player.hp <= 0:
+            return False
+        
+        dx = player.rect.centerx - self.rect.centerx
+        dy = player.rect.centery - self.rect.centery
+        distance = (dx * dx + dy * dy) ** 0.5
+        
+        return distance <= self.detection_radius
+    
+    def can_shoot(self) -> bool:
+        """Check if enemy can shoot."""
+        return self._shoot_cooldown == 0
+    
+    def shoot(self, bullets_group: pygame.sprite.Group) -> None:
+        """Shoot a bullet towards the player."""
+        if not self.can_shoot() or not self.player_target:
+            return
+        
+        from entities.bullet import Bullet
+        
+        # Calculate direction to player
+        dx = self.player_target.rect.centerx - self.rect.centerx
+        direction = 1 if dx >= 0 else -1
+        
+        # Spawn bullet from enemy
+        bx = self.rect.centerx + (direction * 20)
+        by = self.rect.centery
+        bullet = Bullet(bx, by, direction=direction, speed=8.0, is_enemy=True)
+        bullets_group.add(bullet)
+        self._shoot_cooldown = self.shoot_cooldown_frames
+    
+    def update(self, _keys, solids: list[pygame.Rect] | None = None, player=None, bullets_group=None) -> None:
+        """Update enemy AI and movement.
+        
+        Args:
+            _keys: Unused (for compatibility with sprite group update)
+            solids: List of solid rectangles for collision
+            player: Player sprite to detect and engage
+            bullets_group: Group to add bullets to when shooting
+        """
+        self.player_target = player
+        
+        # Update shoot cooldown
+        if self._shoot_cooldown > 0:
+            self._shoot_cooldown -= 1
+        
+        # Detect player
+        player_detected = self.detect_player(player)
+        
+        if player_detected:
+            # Calculate distance to player
+            dx = player.rect.centerx - self.rect.centerx
+            dy = player.rect.centery - self.rect.centery
+            distance = (dx * dx + dy * dy) ** 0.5
+            
+            # Face player
+            self.facing = 1 if dx >= 0 else -1
+            
+            # If in shoot range, shoot
+            if distance <= self.shoot_range and bullets_group:
+                if self.can_shoot():
+                    self.shoot(bullets_group)
+                # Stop moving when shooting
+                self.velocity.x = 0
+            else:
+                # Chase player (move towards player)
+                chase_dir = 1 if dx > 0 else -1
+                self.velocity.x = chase_dir * self.chase_speed
+        else:
+            # Patrol AI: flip direction at bounds
+            if self.rect.left <= self.left_bound:
+                self.velocity.x = abs(self.patrol_speed)
+                self.facing = 1
+            elif self.rect.right >= self.right_bound:
+                self.velocity.x = -abs(self.patrol_speed)
+                self.facing = -1
+            else:
+                # Continue patrol
+                self.velocity.x = self.patrol_speed if self.facing > 0 else -self.patrol_speed
 
         # Gravity
         if self.velocity.y < 18:
