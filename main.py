@@ -15,13 +15,23 @@ from entities.traps import Spike, Lava
 from entities.platforms import MovingPlatform
 from entities.collectibles import Coin, Key
 from entities.weapon_pickup import WeaponPickup
+from entities.weapon import Weapon, Pistol
 from ui.hud import HUD
-from ui.menus import draw_start_menu, draw_pause_menu, draw_animated_background, draw_level_select_menu, get_available_levels, draw_level_complete_menu, draw_game_over_menu
+from ui.menus import draw_start_menu, draw_pause_menu, draw_animated_background, draw_level_select_menu, get_available_levels, draw_level_complete_menu, draw_game_over_menu, draw_about_menu
 from ui.shop import draw_shop_menu
 from ui.sfx import load_sounds
 from ui.transitions import blur_and_dim, fade_overlay
 from utils.camera import Camera
 from utils.particles import ParticleSystem
+from utils.save_system import get_save_data
+from utils.achievements import get_achievement_system
+from utils.difficulty import DifficultySettings
+from utils.transitions import Transition
+from utils.input_manager import get_input_manager
+from entities.enemy_types import FlyingEnemy, TankEnemy, FastEnemy
+from entities.pickup import SpeedPickup, DamageBoostPickup
+from entities.secret_area import SecretArea, BonusRoom
+from utils.object_pool import BulletPool
 
 
 def main() -> None:
@@ -49,6 +59,8 @@ def main() -> None:
         collectibles = pygame.sprite.Group()  # Collectibles group (coins, keys)
         weapon_pickups = pygame.sprite.Group()  # Weapon pickups group
         checkpoints = pygame.sprite.Group()  # Checkpoints group
+        secret_areas = []  # List of secret areas (not sprites)
+        bonus_rooms = []  # List of bonus rooms
         
         # Create enemies based on level
         enms = pygame.sprite.Group()
@@ -77,6 +89,12 @@ def main() -> None:
             # Checkpoints
             checkpoints.add(Checkpoint(200, ground_y))
             checkpoints.add(Checkpoint(600, ground_y))
+            
+            # Secret areas
+            secret_areas.append(SecretArea(850, ground_y - 100, 80, 60, reward_type="coins", reward_amount=3))
+            
+            # Bonus room (hidden area above starting platform)
+            bonus_rooms.append(BonusRoom(50, 50, 200, 150))
         elif "level2" in level_path:
             # Level 2: Multiple enemies on different platforms
             # Enemy on high platform (left side, row 13) - columns 0-5
@@ -113,6 +131,12 @@ def main() -> None:
             checkpoints.add(Checkpoint(150, 350))
             checkpoints.add(Checkpoint(500, 410))
             checkpoints.add(Checkpoint(850, 380))
+            
+            # Secret areas
+            secret_areas.append(SecretArea(600, 250, 100, 80, reward_type="coins", reward_amount=5))
+            
+            # Bonus room (hidden area above middle platform)
+            bonus_rooms.append(BonusRoom(800, 200, 180, 140))
         elif "level3" in level_path:
             # Level 3: Vertical platforming challenge with gaps
             # Starting platform (row 8, columns 0-5) - Y = 8 * 30 = 240
@@ -155,6 +179,12 @@ def main() -> None:
             checkpoints.add(Checkpoint(150, 350))
             checkpoints.add(Checkpoint(500, 410))
             checkpoints.add(Checkpoint(850, 380))
+            
+            # Secret areas
+            secret_areas.append(SecretArea(400, 150, 120, 100, reward_type="coins", reward_amount=8))
+            
+            # Bonus room (hidden area at top of level)
+            bonus_rooms.append(BonusRoom(600, 50, 250, 180))
         elif "level4" in level_path:
             # Boss Level: Final boss battle
             # Boss spawns in center
@@ -172,28 +202,95 @@ def main() -> None:
             # Checkpoints for boss level
             checkpoints.add(Checkpoint(200, 400))
             checkpoints.add(Checkpoint(800, 400))
+            
+            # Secret areas (hidden areas in boss level)
+            secret_areas.append(SecretArea(100, 300, 80, 60, reward_type="coins", reward_amount=10))
+            secret_areas.append(SecretArea(900, 300, 80, 60, reward_type="coins", reward_amount=10))
+        elif "level5" in level_path:
+            # Level 5: Add enemies and content
+            ground_y = 400
+            enms.add(Enemy(300, ground_y - 40, left_bound=260, right_bound=420, speed=2.0))
+            enms.add(Enemy(600, ground_y - 40, left_bound=560, right_bound=720, speed=2.0))
+            pkups.add(AmmoPickup(400, ground_y, ammo_amount=30))
+            pkups.add(HealthPickup(500, ground_y, health_amount=2))
+            collectibles.add(Coin(350, ground_y - 20, value=15))
+            collectibles.add(Coin(650, ground_y - 20, value=15))
+            checkpoints.add(Checkpoint(200, ground_y))
+            checkpoints.add(Checkpoint(700, ground_y))
+            
+            # Secret areas
+            secret_areas.append(SecretArea(800, ground_y - 150, 100, 80, reward_type="coins", reward_amount=6))
+            
+            # Bonus room
+            bonus_rooms.append(BonusRoom(50, 100, 200, 150))
+        elif "level6" in level_path:
+            # Level 6: Add enemies and content
+            ground_y = 400
+            enms.add(Enemy(250, ground_y - 40, left_bound=210, right_bound=370, speed=2.0))
+            enms.add(Enemy(500, ground_y - 40, left_bound=460, right_bound=620, speed=2.0))
+            enms.add(Enemy(750, ground_y - 40, left_bound=710, right_bound=870, speed=2.0))
+            pkups.add(AmmoPickup(300, ground_y, ammo_amount=30))
+            pkups.add(AmmoPickup(550, ground_y, ammo_amount=30))
+            pkups.add(HealthPickup(400, ground_y, health_amount=2))
+            pkups.add(ShieldPickup(600, ground_y, shield_duration=300))
+            collectibles.add(Coin(280, ground_y - 20, value=15))
+            collectibles.add(Coin(530, ground_y - 20, value=15))
+            collectibles.add(Coin(780, ground_y - 20, value=15))
+            checkpoints.add(Checkpoint(150, ground_y))
+            checkpoints.add(Checkpoint(450, ground_y))
+            checkpoints.add(Checkpoint(750, ground_y))
+            
+            # Secret areas
+            secret_areas.append(SecretArea(100, ground_y - 200, 120, 100, reward_type="coins", reward_amount=8))
+            secret_areas.append(SecretArea(850, ground_y - 150, 100, 80, reward_type="coins", reward_amount=6))
+            
+            # Bonus room
+            bonus_rooms.append(BonusRoom(400, 50, 250, 200))
         else:
             # Default: Single enemy
             enms.add(Enemy(300, 100, left_bound=260, right_bound=420, speed=2.0))
             pkups.add(AmmoPickup(500, 100, ammo_amount=30))
         
         grp = pygame.sprite.Group(ply, *enms.sprites(), *pkups.sprites(), *trps.sprites(), *platforms.sprites(), *collectibles.sprites(), *weapon_pickups.sprites(), *checkpoints.sprites())
-        return lvl, ply, blts, enms, pkups, trps, platforms, collectibles, weapon_pickups, checkpoints, grp
+        return lvl, ply, blts, enms, pkups, trps, platforms, collectibles, weapon_pickups, checkpoints, grp, secret_areas, bonus_rooms
+
+    # Initialize save system and achievements
+    save_data = get_save_data()
+    achievement_system = get_achievement_system()
+    difficulty_settings = DifficultySettings(save_data.get_difficulty())
+    input_manager = get_input_manager()
+    transition = Transition()
+    
+    # Initialize bullet pool for performance
+    bullet_pool = BulletPool(initial_size=30, max_size=200)
 
     # Initialize with default level
-    level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game()
+    level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game()
+    
+    # Apply difficulty settings to player
+    difficulty_settings.apply_to_player(player)
+    
+    # Apply difficulty to enemies
+    for enemy in enemies:
+        difficulty_settings.apply_to_enemy(enemy)
+    
     hud = HUD()
     camera = Camera()
     camera.set_target(player)
     particles = ParticleSystem()
     score = 0
-    coins = 0  # Coin currency for shop
+    coins = save_data.get_coins()  # Load coins from save
     last_checkpoint = None  # Store last activated checkpoint
-    state = "start"  # start | level_select | playing | paused | level_complete | game_over | shop
+    state = "start"  # start | level_select | playing | paused | level_complete | game_over | shop | about
     sounds = load_sounds()
     available_levels = get_available_levels()
     selected_level_index = 0
     current_level_path = "levels/level1.csv"
+    enemies_killed_this_level = 0
+    damage_taken_this_level = 0
+    weapons_used_this_level = []
+    level_start_time = pygame.time.get_ticks()
+    achievement_notifications = []  # List of (text, timer) tuples
 
     running = True
     hover_rects: dict[str, pygame.Rect] | None = None
@@ -218,30 +315,54 @@ def main() -> None:
                         state = "level_select"
                         available_levels = get_available_levels()
                         selected_level_index = 0
+                    elif hover_rects.get("about") and hover_rects["about"].collidepoint(event.pos):
+                        sounds.play_click()
+                        state = "about"
                     elif hover_rects.get("quit") and hover_rects["quit"].collidepoint(event.pos):
                         sounds.play_click()
                         running = False
+                elif state == "about" and hover_rects:
+                    if hover_rects.get("back") and hover_rects["back"].collidepoint(event.pos):
+                        sounds.play_click()
+                        state = "start"
                 elif state == "shop" and hover_rects:
                     # Shop button clicks
                     if hover_rects.get("health") and hover_rects["health"].collidepoint(event.pos):
                         if coins >= 50:
                             coins -= 50
+                            save_data.set_coins(coins)
                             player.upgrade_health()
+                            player_data = save_data.get_player_data()
+                            player_data["hp_upgrades"] = player.hp_upgrades
+                            player_data["max_hp"] = player.max_hp
+                            save_data.set_player_data(player_data)
                             sounds.play_click()
                     elif hover_rects.get("ammo") and hover_rects["ammo"].collidepoint(event.pos):
                         if coins >= 30:
                             coins -= 30
+                            save_data.set_coins(coins)
                             player.upgrade_ammo()
+                            player_data = save_data.get_player_data()
+                            player_data["ammo_upgrades"] = player.ammo_upgrades
+                            save_data.set_player_data(player_data)
                             sounds.play_click()
                     elif hover_rects.get("speed") and hover_rects["speed"].collidepoint(event.pos):
                         if coins >= 40:
                             coins -= 40
+                            save_data.set_coins(coins)
                             player.upgrade_speed()
+                            player_data = save_data.get_player_data()
+                            player_data["speed_multiplier"] = player.speed_multiplier
+                            save_data.set_player_data(player_data)
                             sounds.play_click()
                     elif hover_rects.get("jump") and hover_rects["jump"].collidepoint(event.pos):
                         if coins >= 35:
                             coins -= 35
+                            save_data.set_coins(coins)
                             player.upgrade_jump()
+                            player_data = save_data.get_player_data()
+                            player_data["jump_multiplier"] = player.jump_multiplier
+                            save_data.set_player_data(player_data)
                             sounds.play_click()
                     elif hover_rects.get("close") and hover_rects["close"].collidepoint(event.pos):
                         sounds.play_click()
@@ -261,11 +382,23 @@ def main() -> None:
                     if level_clicked:
                         sounds.play_click()
                         current_level_path = str(level_clicked)
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        # Reset level stats
+                        enemies_killed_this_level = 0
+                        damage_taken_this_level = 0
+                        weapons_used_this_level = []
+                        level_start_time = pygame.time.get_ticks()
+                        # Start transition
+                        transition.start_fade_out(lambda: None)
+                        # Wait for transition, then load level
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
+                        # Apply difficulty
+                        difficulty_settings.apply_to_player(player)
+                        for enemy in enemies:
+                            difficulty_settings.apply_to_enemy(enemy)
                         camera.set_target(player)
                         particles.clear()
-                        particles.clear()
                         score = 0
+                        transition.start_fade_in()
                         state = "playing"
                         sounds.start_bgm()
                     elif hover_rects.get("back") and hover_rects["back"].collidepoint(event.pos):
@@ -279,7 +412,7 @@ def main() -> None:
                     elif hover_rects.get("quit_to_start") and hover_rects["quit_to_start"].collidepoint(event.pos):
                         sounds.play_click()
                         sounds.stop_bgm()
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                         camera.set_target(player)
                         particles.clear()
                         score = 0
@@ -292,7 +425,7 @@ def main() -> None:
                         selected_level_index = 0
                     elif hover_rects.get("quit_to_menu") and hover_rects["quit_to_menu"].collidepoint(event.pos):
                         sounds.play_click()
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                         camera.set_target(player)
                         particles.clear()
                         score = 0
@@ -300,7 +433,7 @@ def main() -> None:
                 elif state == "game_over" and hover_rects:
                     if hover_rects.get("retry") and hover_rects["retry"].collidepoint(event.pos):
                         sounds.play_click()
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                         camera.set_target(player)
                         particles.clear()
                         score = 0
@@ -309,7 +442,7 @@ def main() -> None:
                         sounds.start_bgm()
                     elif hover_rects.get("quit_to_menu") and hover_rects["quit_to_menu"].collidepoint(event.pos):
                         sounds.play_click()
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                         camera.set_target(player)
                         particles.clear()
                         score = 0
@@ -319,6 +452,8 @@ def main() -> None:
                     state = "level_select"
                     available_levels = get_available_levels()
                     selected_level_index = 0
+                elif state == "about" and event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_KP_ENTER):
+                    state = "start"
                 elif state == "level_select":
                     if event.key == pygame.K_ESCAPE:
                         state = "start"
@@ -331,7 +466,7 @@ def main() -> None:
                             level_name, level_path = available_levels[selected_level_index]
                             sounds.play_click()
                             current_level_path = str(level_path)
-                            level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                            level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                             camera.set_target(player)
                             particles.clear()
                             score = 0
@@ -366,7 +501,7 @@ def main() -> None:
                         sounds.start_bgm()
                     elif event.key in (pygame.K_q, pygame.K_Q):
                         # back to start, reset game
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                         camera.set_target(player)
                         particles.clear()
                         score = 0
@@ -392,7 +527,7 @@ def main() -> None:
                 elif state == "game_over":
                     if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_r):
                         sounds.play_click()
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                         camera.set_target(player)
                         particles.clear()
                         score = 0
@@ -400,14 +535,40 @@ def main() -> None:
                         sounds.start_bgm()
                     elif event.key == pygame.K_ESCAPE:
                         sounds.play_click()
-                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites = new_game(current_level_path)
+                        level, player, bullets, enemies, pickups, traps, platforms, collectibles, weapon_pickups, checkpoints, all_sprites, secret_areas, bonus_rooms = new_game(current_level_path)
                         camera.set_target(player)
                         particles.clear()
                         score = 0
                         state = "start"
 
+        # Update transitions
+        transition.update()
+        
+        # Update achievement notifications
+        achievement_notifications = [(text, timer - 1) for text, timer in achievement_notifications if timer > 0]
+
         keys = pygame.key.get_pressed()
         if state == "playing":
+            # Use input manager for movement
+            move_dir = input_manager.get_move_direction(keys)
+            player.velocity.x = move_dir * player.physics.move_speed * player.speed_multiplier
+            if move_dir != 0:
+                player.facing = 1 if move_dir > 0 else -1
+            
+            # Jump
+            if input_manager.is_pressed("jump", keys) and player.on_ground:
+                player.velocity.y = player.physics.jump_velocity * player.jump_multiplier
+                player.on_ground = False
+            
+            # Handle power-up timers
+            current_time = pygame.time.get_ticks()
+            if hasattr(player, '_speed_boost_end') and current_time >= player._speed_boost_end:
+                player.speed_multiplier /= 1.5  # Remove speed boost
+                player._speed_boost_end = 0
+            if hasattr(player, '_damage_boost_end') and current_time >= player._damage_boost_end:
+                if hasattr(player, '_damage_multiplier'):
+                    player._damage_multiplier /= 2.0  # Remove damage boost
+                player._damage_boost_end = 0
             # Track previous player state for dust particles
             was_on_ground = player.on_ground
             
@@ -445,33 +606,40 @@ def main() -> None:
                     if hit_list:
                         for e in hit_list:
                             prev_hp = e.hp
-                            # Rockets do more damage
-                            damage = 2 if bullet.is_rocket else 1
+                            # Use bullet damage (set by weapon)
+                            damage = getattr(bullet, 'damage', 2 if bullet.is_rocket else 1)
+                            # Apply damage multiplier if player has damage boost
+                            if hasattr(player, '_damage_multiplier'):
+                                damage = int(damage * player._damage_multiplier)
                             e.take_damage(damage)
-                            # Impact particles
+                            # Enhanced impact particles with sparks
                             particles.create_impact(bullet.rect.centerx, bullet.rect.centery)
+                            particles.create_impact_sparks(bullet.rect.centerx, bullet.rect.centery)
                             if e.hp == 0 and prev_hp > 0:
+                                enemies_killed_this_level += 1
                                 # Boss gives more points
                                 if isinstance(e, Boss):
                                     score += 500
                                     camera.add_screen_shake(15.0)  # Big shake for boss death
                                     # Bigger explosion for boss
                                     for _ in range(3):
-                                        particles.create_explosion(
+                                        particles.create_big_explosion(
                                             e.rect.centerx + random.randint(-20, 20),
                                             e.rect.centery + random.randint(-20, 20),
-                                            (255, 150, 0)
+                                            (255, 150, 0),
+                                            count=25
                                         )
                                 else:
                                     score += 100
                                     camera.add_screen_shake(5.0)
-                                    particles.create_explosion(e.rect.centerx, e.rect.centery, (255, 100, 0))
+                                    particles.create_big_explosion(e.rect.centerx, e.rect.centery, (255, 100, 0), count=20)
                                 sounds.play_explode()
                             else:
                                 sounds.play_hit()
                         # ASIC Miners create bigger explosion
                         if bullet.is_rocket:
-                            particles.create_explosion(bullet.rect.centerx, bullet.rect.centery, S.BITCOIN_ORANGE)
+                            particles.create_big_explosion(bullet.rect.centerx, bullet.rect.centery, S.BITCOIN_ORANGE, count=25)
+                            particles.create_impact_sparks(bullet.rect.centerx, bullet.rect.centery, count=15, color=(255, 200, 100))
                             camera.add_screen_shake(8.0)
                             sounds.play_explode()
                         bullet.kill()
@@ -480,8 +648,9 @@ def main() -> None:
                     if bullet.rect.colliderect(player.rect):
                         player.take_damage(1)
                         sounds.play_hit()
-                        # Impact particles
+                        # Enhanced impact particles
                         particles.create_impact(bullet.rect.centerx, bullet.rect.centery)
+                        particles.create_impact_sparks(bullet.rect.centerx, bullet.rect.centery, color=(255, 100, 100))
                         bullet.kill()
             
             # Bullets hit walls/solids (ASIC Miners explode)
@@ -492,7 +661,8 @@ def main() -> None:
                     for solid in level.solid_rects:
                         if bullet_rect.colliderect(solid):
                             # ASIC Miner explosion on wall hit
-                            particles.create_explosion(bullet.rect.centerx, bullet.rect.centery, S.BITCOIN_ORANGE)
+                            particles.create_big_explosion(bullet.rect.centerx, bullet.rect.centery, S.BITCOIN_ORANGE, count=20)
+                            particles.create_impact_sparks(bullet.rect.centerx, bullet.rect.centery, count=12)
                             camera.add_screen_shake(6.0)
                             sounds.play_explode()
                             bullet.kill()
@@ -508,6 +678,9 @@ def main() -> None:
             if len(enemies) == 0 or len(alive_enemies) == 0:
                 if state == "playing":  # Only trigger once
                     print(f"🎉 Level Complete! All enemies defeated. Score: {score}")
+                    # Apply difficulty score multiplier
+                    score = int(score * difficulty_settings.get_score_multiplier())
+                    
                     # Extra bonus for defeating boss
                     if boss_defeated:
                         score += 1000  # Big bonus for boss
@@ -515,6 +688,42 @@ def main() -> None:
                     else:
                         score += 500  # Bonus for completing level
                         coins += 50  # Bonus coins for level completion
+                    
+                    # Save coins
+                    save_data.set_coins(coins)
+                    
+                    # Save high score
+                    level_name = current_level_path.replace("levels/", "").replace(".csv", "")
+                    is_new_record = save_data.set_high_score(level_name, score)
+                    if is_new_record:
+                        achievement_notifications.append(("New High Score!", 180))
+                    
+                    # Complete level in save data
+                    save_data.complete_level(level_name)
+                    
+                    # Check achievements
+                    current_weapon = player.get_current_weapon()
+                    weapon_name = current_weapon.name if current_weapon else ""
+                    if weapon_name and weapon_name not in weapons_used_this_level:
+                        weapons_used_this_level.append(weapon_name)
+                    
+                    # Calculate coins collected this level (approximate)
+                    coins_collected_this_level = coins  # Will be tracked better in future
+                    newly_unlocked = achievement_system.check_achievements(
+                        level_name=level_name,
+                        enemies_killed=enemies_killed_this_level,
+                        coins_collected=coins_collected_this_level,
+                        score=score,
+                        damage_taken=damage_taken_this_level,
+                        weapons_used=weapons_used_this_level
+                    )
+                    
+                    # Show achievement notifications
+                    for ach_id in newly_unlocked:
+                        ach = achievement_system.get_achievement(ach_id)
+                        if ach:
+                            achievement_notifications.append((f"Achievement: {ach.name}!", 300))
+                    
                     sounds.stop_bgm()
                     state = "level_complete"
                     sounds.play_explode()  # Victory sound
@@ -532,8 +741,10 @@ def main() -> None:
             for collectible in collectibles.copy():
                 if collectible.collect(player):
                     if isinstance(collectible, Coin):
-                        score += collectible.value
-                        coins += collectible.value  # Add to coin currency
+                        coin_value = collectible.value
+                        score += coin_value
+                        coins += coin_value  # Add to coin currency
+                        save_data.add_coins(coin_value)  # Save coins
                         sounds.play_hover()
                     elif isinstance(collectible, Key):
                         # Store key in player (could be used for doors later)
@@ -552,6 +763,10 @@ def main() -> None:
                     sounds.play_hover()
                     # Switch to newly acquired weapon
                     player.current_weapon_index = len(player.weapons) - 1
+                    # Track weapon usage for achievements
+                    current_weapon = player.get_current_weapon()
+                    if current_weapon and current_weapon.name not in weapons_used_this_level:
+                        weapons_used_this_level.append(current_weapon.name)
         
         # Checkpoint activation
         if state == "playing":
@@ -561,11 +776,66 @@ def main() -> None:
                         last_checkpoint = checkpoint
                         sounds.play_hover()  # Use hover sound for checkpoint activation
         
+        # Secret area activation
+        if state == "playing":
+            for secret_area in secret_areas:
+                if secret_area.check_activation(player):
+                    # Spawn rewards
+                    if secret_area.reward_type == "coins":
+                        for _ in range(secret_area.reward_amount):
+                            coin = Coin(
+                                secret_area.rect.centerx + random.randint(-30, 30),
+                                secret_area.rect.centery + random.randint(-20, 20),
+                                value=15
+                            )
+                            collectibles.add(coin)
+                    achievement_notifications.append(("Secret Found!", 180))
+                    # Check secret achievement
+                    newly_unlocked = achievement_system.check_achievements(
+                        level_name=current_level_path.replace("levels/", "").replace(".csv", ""),
+                        enemies_killed=0,
+                        coins_collected=0,
+                        score=0,
+                        damage_taken=0,
+                        weapons_used=[],
+                        secret_found=True
+                    )
+                    for ach_id in newly_unlocked:
+                        ach = achievement_system.get_achievement(ach_id)
+                        if ach:
+                            achievement_notifications.append((f"Achievement: {ach.name}!", 300))
+                    sounds.play_hover()
+        
+        # Bonus room entry
+        if state == "playing":
+            for bonus_room in bonus_rooms:
+                if bonus_room.check_entry(player):
+                    bonus_room.spawn_rewards(collectibles)
+                    achievement_notifications.append(("Bonus Room!", 180))
+                    # Check bonus room achievement
+                    newly_unlocked = achievement_system.check_achievements(
+                        level_name=current_level_path.replace("levels/", "").replace(".csv", ""),
+                        enemies_killed=0,
+                        coins_collected=0,
+                        score=0,
+                        damage_taken=0,
+                        weapons_used=[],
+                        bonus_room_found=True
+                    )
+                    for ach_id in newly_unlocked:
+                        ach = achievement_system.get_achievement(ach_id)
+                        if ach:
+                            achievement_notifications.append((f"Achievement: {ach.name}!", 300))
+                    sounds.play_hover()
+        
         # Enemy contact damages player (with i-frames)
         if state == "playing":
             for e in enemies:
                 if player.rect.colliderect(e.rect):
+                    prev_hp = player.hp
                     player.take_damage(1)
+                    if player.hp < prev_hp:
+                        damage_taken_this_level += 1
                     sounds.play_hit()
         
         # Trap collisions
@@ -598,6 +868,8 @@ def main() -> None:
             # Draw with camera offset
             camera_offset = camera.get_offset()
             level.draw(screen, camera_offset)
+            
+            # Glow effects removed - user requested no circles on items or enemies
             
             # Draw sprites with camera offset
             for sprite in all_sprites:
@@ -637,6 +909,10 @@ def main() -> None:
                 offset_rect = trap.rect.move(camera_offset)
                 screen.blit(trap.image, offset_rect)
             
+            # Draw secret area indicators
+            for secret_area in secret_areas:
+                secret_area.draw_indicator(screen, camera_offset)
+            
             # Draw particles
             particles.draw(screen, camera_offset)
             
@@ -648,7 +924,131 @@ def main() -> None:
                 if isinstance(e, Boss) and e.hp > 0:
                     boss = e
                     break
-            hud.draw(screen, hp=player.hp, max_hp=player.max_hp, ammo_text=f"{player.ammo_in_mag}/{player.reserve_ammo}", score=score, current_weapon=current_weapon, boss=boss)
+            # Get level size for minimap
+            level_size = (level.width * level.tile_size if hasattr(level, 'width') else S.WIDTH * 2, 
+                         level.height * level.tile_size if hasattr(level, 'height') else S.HEIGHT * 2)
+            player_pos = (player.rect.centerx, player.rect.centery)
+            
+            # Load volume settings from save
+            volume_settings = save_data.data.get("settings", {})
+            sounds.master_volume = volume_settings.get("master_volume", 1.0)
+            sounds.sfx_volume = volume_settings.get("sfx_volume", 1.0)
+            sounds.music_volume = volume_settings.get("music_volume", 1.0)
+            
+            hud.draw(screen, hp=player.hp, max_hp=player.max_hp, ammo_text=f"{player.ammo_in_mag}/{player.reserve_ammo}", 
+                    score=score, current_weapon=current_weapon, boss=boss, 
+                    player_pos=player_pos, level_size=level_size, enemies=enemies)
+            
+            # Draw professional achievement notifications
+            if achievement_notifications:
+                try:
+                    import pygame.freetype as ft
+                    import math
+                    font_notif = ft.Font(None, 32)
+                    font_small = ft.Font(None, 20)
+                    y_offset = 120
+                    w, h = screen.get_size()
+                    
+                    for text, timer in achievement_notifications[:3]:  # Show max 3
+                        # Fade in/out effect
+                        if timer > 240:
+                            alpha = min(255, (300 - timer) * 4)  # Fade in
+                        else:
+                            alpha = min(255, timer * 2)  # Fade out
+                        
+                        # Notification badge dimensions
+                        badge_w = 500
+                        badge_h = 60
+                        badge_x = w // 2 - badge_w // 2
+                        badge_y = y_offset
+                        badge_rect = pygame.Rect(badge_x, badge_y, badge_w, badge_h)
+                        
+                        # Shadow
+                        shadow_rect = pygame.Rect(badge_x + 4, badge_y + 4, badge_w, badge_h)
+                        shadow_surf = pygame.Surface((badge_w, badge_h), pygame.SRCALPHA)
+                        shadow_surf.fill((0, 0, 0, int(alpha * 0.5)))
+                        screen.blit(shadow_surf, shadow_rect)
+                        
+                        # Badge background with gradient
+                        badge_bg = pygame.Surface((badge_w, badge_h), pygame.SRCALPHA)
+                        # Determine if it's an achievement or other notification
+                        is_achievement = "Achievement:" in text
+                        if is_achievement:
+                            # Gold gradient for achievements
+                            for y in range(badge_h):
+                                ratio = y / badge_h
+                                r = int(60 * (1 - ratio) + 80 * ratio)
+                                g = int(50 * (1 - ratio) + 65 * ratio)
+                                b = int(30 * (1 - ratio) + 40 * ratio)
+                                pygame.draw.line(badge_bg, (r, g, b), (0, y), (badge_w, y))
+                            border_color = S.BITCOIN_GOLD
+                        else:
+                            # Orange gradient for other notifications
+                            for y in range(badge_h):
+                                ratio = y / badge_h
+                                r = int(50 * (1 - ratio) + 70 * ratio)
+                                g = int(40 * (1 - ratio) + 55 * ratio)
+                                b = int(25 * (1 - ratio) + 35 * ratio)
+                                pygame.draw.line(badge_bg, (r, g, b), (0, y), (badge_w, y))
+                            border_color = S.BITCOIN_ORANGE
+                        
+                        badge_bg.set_alpha(alpha)
+                        screen.blit(badge_bg, badge_rect)
+                        
+                        # Border
+                        border_surf = pygame.Surface((badge_w, badge_h), pygame.SRCALPHA)
+                        pygame.draw.rect(border_surf, (*border_color, alpha), (0, 0, badge_w, badge_h), width=3, border_radius=8)
+                        screen.blit(border_surf, badge_rect)
+                        
+                        # Inner highlight
+                        highlight_rect = pygame.Rect(badge_x + 2, badge_y + 2, badge_w - 4, 4)
+                        highlight_surf = pygame.Surface((highlight_rect.width, highlight_rect.height), pygame.SRCALPHA)
+                        highlight_surf.fill((255, 255, 255, int(alpha * 0.3)))
+                        screen.blit(highlight_surf, highlight_rect)
+                        
+                        # Text with shadow
+                        text_color = S.BITCOIN_GOLD if is_achievement else (255, 255, 255)
+                        notif_shadow, _ = font_notif.render(text, (0, 0, 0))
+                        notif_surf, _ = font_notif.render(text, text_color)
+                        
+                        # Set alpha
+                        notif_shadow.set_alpha(alpha)
+                        notif_surf.set_alpha(alpha)
+                        
+                        # Center text
+                        text_x = badge_x + badge_w // 2 - notif_surf.get_width() // 2
+                        text_y = badge_y + badge_h // 2 - notif_surf.get_height() // 2
+                        
+                        screen.blit(notif_shadow, (text_x + 2, text_y + 2))
+                        screen.blit(notif_surf, (text_x, text_y))
+                        
+                        # Icon (achievement star or notification dot)
+                        if is_achievement:
+                            icon_x = badge_x + 20
+                            icon_y = badge_y + badge_h // 2
+                            # Draw star icon
+                            star_points = [
+                                (icon_x, icon_y - 8),
+                                (icon_x + 3, icon_y - 3),
+                                (icon_x + 8, icon_y - 3),
+                                (icon_x + 4, icon_y + 1),
+                                (icon_x + 6, icon_y + 6),
+                                (icon_x, icon_y + 3),
+                                (icon_x - 6, icon_y + 6),
+                                (icon_x - 4, icon_y + 1),
+                                (icon_x - 8, icon_y - 3),
+                                (icon_x - 3, icon_y - 3),
+                            ]
+                            star_surf = pygame.Surface((20, 20), pygame.SRCALPHA)
+                            pygame.draw.polygon(star_surf, (*S.BITCOIN_GOLD, alpha), star_points)
+                            screen.blit(star_surf, (icon_x - 10, icon_y - 10))
+                        
+                        y_offset += 70
+                except Exception:
+                    pass
+            
+            # Draw transition overlay
+            transition.draw(screen)
         elif state == "shop":
             # Draw shop menu
             draw_animated_background(screen, pygame.time.get_ticks())
@@ -681,13 +1081,26 @@ def main() -> None:
             last_hover_key = current
         elif state == "start":
             mouse_pos = pygame.mouse.get_pos()
-            hover_rects = draw_start_menu(screen, mouse_pos)
+            hover_rects = draw_start_menu(screen, mouse_pos, pygame.time.get_ticks())
             # hover sound detection
             current = None
             if hover_rects.get("select_level") and hover_rects["select_level"].collidepoint(mouse_pos):
                 current = "select_level"
+            elif hover_rects.get("about") and hover_rects["about"].collidepoint(mouse_pos):
+                current = "about"
             elif hover_rects.get("quit") and hover_rects["quit"].collidepoint(mouse_pos):
                 current = "quit"
+            if current != last_hover_key and current is not None:
+                sounds.play_hover()
+            last_hover_key = current
+        elif state == "about":
+            draw_animated_background(screen, pygame.time.get_ticks())
+            mouse_pos = pygame.mouse.get_pos()
+            hover_rects = draw_about_menu(screen, mouse_pos)
+            # hover sound detection
+            current = None
+            if hover_rects.get("back") and hover_rects["back"].collidepoint(mouse_pos):
+                current = "back"
             if current != last_hover_key and current is not None:
                 sounds.play_hover()
             last_hover_key = current
@@ -710,7 +1123,7 @@ def main() -> None:
             mouse_pos = pygame.mouse.get_pos()
             # apply blur+dim to gameplay frame before drawing menu
             blur_and_dim(screen, scale_factor=0.2, dim_alpha=140)
-            hover_rects = draw_pause_menu(screen, mouse_pos)
+            hover_rects = draw_pause_menu(screen, mouse_pos, pygame.time.get_ticks())
             current = None
             if hover_rects.get("resume") and hover_rects["resume"].collidepoint(mouse_pos):
                 current = "resume"

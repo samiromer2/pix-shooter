@@ -99,24 +99,20 @@ class SpriteLoader:
                                 all_frames = split_sprite_sheet(img, frame_size, frame_size)
                                 # Animation spritesheets typically have 4 directions (front, back, left, right)
                                 # and multiple frames per direction
-                                # For simplicity, use all frames for walk, and first frame for idle
-                                if len(all_frames) >= 8:
-                                    # Use first 4 frames for idle (first direction, all frames)
-                                    idle_frames = all_frames[:4] if len(all_frames) >= 4 else [all_frames[0]]
-                                    # Use remaining frames for walk, or cycle all if not enough
-                                    if len(all_frames) > 4:
-                                        walk_frames = all_frames[4:8] if len(all_frames) >= 8 else all_frames[1:5]
-                                    else:
-                                        walk_frames = all_frames
-                                elif len(all_frames) >= 4:
-                                    # Split between idle and walk
-                                    mid = len(all_frames) // 2
-                                    idle_frames = all_frames[:mid]
-                                    walk_frames = all_frames[mid:]
+                                # Use only ONE frame for idle (first frame), and cycle through walk frames
+                                if len(all_frames) >= 4:
+                                    # Idle: use only the first frame (single frame, no animation)
+                                    idle_frames = [all_frames[0]]
+                                    # Walk: use frames 1-4 (or available frames) for walking animation
+                                    walk_frames = all_frames[1:5] if len(all_frames) >= 5 else all_frames[1:] if len(all_frames) > 1 else [all_frames[0]]
+                                elif len(all_frames) >= 2:
+                                    # If only 2-3 frames, use first for idle, rest for walk
+                                    idle_frames = [all_frames[0]]
+                                    walk_frames = all_frames[1:]
                                 else:
-                                    # Use all frames for both
-                                    idle_frames = all_frames
-                                    walk_frames = all_frames
+                                    # Single frame - use for both
+                                    idle_frames = [all_frames[0]]
+                                    walk_frames = [all_frames[0]]
                             else:
                                 # Single frame or couldn't detect, use as is
                                 idle_frames = [img]
@@ -125,8 +121,10 @@ class SpriteLoader:
                             # Add this enemy type's animations
                             enemy_anims = {}
                             if idle_frames:
-                                enemy_anims["idle"] = Animation(idle_frames, fps=4.0)
+                                # Idle: Use only the FIRST frame, no animation (fps=0 means no update)
+                                enemy_anims["idle"] = Animation([idle_frames[0]], fps=0.0)  # fps=0 = static, no animation
                             if walk_frames:
+                                # Walk: Use frames for animation
                                 enemy_anims["walk"] = Animation(walk_frames, fps=6.0)
                             
                             if enemy_anims:
@@ -160,13 +158,16 @@ class SpriteLoader:
                                             from utils.animations import split_sprite_sheet
                                             frames = split_sprite_sheet(img, size, size)
                                             if len(frames) > 1:
-                                                self.enemy_animations["idle"] = Animation([frames[0]], fps=1.0)
-                                                self.enemy_animations["walk"] = Animation(frames[:4] if len(frames) >= 4 else frames, fps=6.0)
+                                                # Idle: Use only first frame, no animation
+                                                self.enemy_animations["idle"] = Animation([frames[0]], fps=0.0)
+                                                # Walk: Use frames 1-4 for animation
+                                                walk_frames = frames[1:5] if len(frames) >= 5 else frames[1:] if len(frames) > 1 else [frames[0]]
+                                                self.enemy_animations["walk"] = Animation(walk_frames, fps=6.0)
                                                 break
                                 else:
-                                    # Single frame
-                                    self.enemy_animations["idle"] = Animation([img], fps=1.0)
-                                    self.enemy_animations["walk"] = Animation([img], fps=1.0)
+                                    # Single frame - use for both, no animation
+                                    self.enemy_animations["idle"] = Animation([img], fps=0.0)
+                                    self.enemy_animations["walk"] = Animation([img], fps=0.0)
                                 break
                     if self.enemy_animations:
                         break
@@ -175,8 +176,8 @@ class SpriteLoader:
             if not self.enemy_animations:
                 fallback = pygame.Surface((32, 40))
                 fallback.fill((180, 60, 60))
-                self.enemy_animations["idle"] = Animation([fallback], fps=1.0)
-                self.enemy_animations["walk"] = Animation([fallback], fps=1.0)
+                self.enemy_animations["idle"] = Animation([fallback], fps=0.0)
+                self.enemy_animations["walk"] = Animation([fallback], fps=0.0)
         
         # Bullet sprites (simple, no animation needed)
         bullet_path = self.base_path / "bullet"

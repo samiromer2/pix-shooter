@@ -75,8 +75,6 @@ class HealthPickup(pygame.sprite.Sprite):
         # Draw red cross
         pygame.draw.rect(self.image, (255, 50, 50), (10, 4, 4, 16))
         pygame.draw.rect(self.image, (255, 50, 50), (4, 10, 16, 4))
-        # Add glow effect
-        pygame.draw.circle(self.image, (255, 100, 100, 100), (12, 12), 12, 2)
         
         self.rect = self.image.get_rect(center=(x, y))
         
@@ -116,8 +114,6 @@ class ShieldPickup(pygame.sprite.Sprite):
         # Draw blue shield shape
         pygame.draw.circle(self.image, (100, 150, 255), (12, 12), 10, 2)
         pygame.draw.arc(self.image, (150, 200, 255), (4, 4, 16, 16), 0, 3.14, 2)
-        # Add glow effect
-        pygame.draw.circle(self.image, (100, 150, 255, 100), (12, 12), 12, 1)
         
         self.rect = self.image.get_rect(center=(x, y))
         
@@ -143,4 +139,96 @@ class ShieldPickup(pygame.sprite.Sprite):
             player._iframes_counter = max(player._iframes_counter, self.shield_duration)
             return True
         return False
+
+
+class SpeedPickup(pygame.sprite.Sprite):
+    """Speed boost pickup that temporarily increases movement speed."""
+    
+    def __init__(self, x: int, y: int, duration: int = 600, speed_multiplier: float = 1.5) -> None:
+        super().__init__()
+        self.duration = duration
+        self.speed_multiplier = speed_multiplier
+        
+        # Create speed pickup sprite (green arrow)
+        self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
+        # Draw green arrow pointing right
+        pygame.draw.polygon(self.image, (50, 255, 50), [(4, 12), (16, 6), (16, 10), (20, 10), (20, 14), (16, 14), (16, 18)])
+        
+        self.rect = self.image.get_rect(center=(x, y))
+        self.bob_offset = 0.0
+        self.bob_speed = 2.0
+        self._base_y = y
+    
+    def update(self, *args, **kwargs) -> None:
+        """Animate the pickup."""
+        import math
+        self.bob_offset += self.bob_speed
+        if self.bob_offset >= 360:
+            self.bob_offset = 0.0
+        bob_amount = math.sin(math.radians(self.bob_offset)) * 3
+        self.rect.y = int(self._base_y + bob_amount)
+    
+    def collect(self, player) -> bool:
+        """Try to collect this pickup."""
+        if self.rect.colliderect(player.rect):
+            # Apply speed boost
+            if not hasattr(player, '_speed_boost_end'):
+                player._speed_boost_end = 0
+            player._speed_boost_end = max(player._speed_boost_end, pygame.time.get_ticks() + self.duration * 16)  # Convert frames to ms
+            player.speed_multiplier *= self.speed_multiplier
+            return True
+        return False
+
+
+class DamageBoostPickup(pygame.sprite.Sprite):
+    """Damage boost pickup that temporarily increases weapon damage."""
+    
+    def __init__(self, x: int, y: int, duration: int = 600, damage_multiplier: float = 2.0) -> None:
+        super().__init__()
+        self.duration = duration
+        self.damage_multiplier = damage_multiplier
+        
+        # Create damage boost sprite (red star)
+        self.image = pygame.Surface((24, 24), pygame.SRCALPHA)
+        # Draw red star
+        import math
+        center = (12, 12)
+        outer_radius = 10
+        inner_radius = 5
+        points = []
+        for i in range(10):
+            angle = math.radians(i * 36 - 90)
+            radius = outer_radius if i % 2 == 0 else inner_radius
+            x = center[0] + radius * math.cos(angle)
+            y = center[1] + radius * math.sin(angle)
+            points.append((x, y))
+        pygame.draw.polygon(self.image, (255, 50, 50), points)
+        
+        self.rect = self.image.get_rect(center=(x, y))
+        self.bob_offset = 0.0
+        self.bob_speed = 2.0
+        self._base_y = y
+    
+    def update(self, *args, **kwargs) -> None:
+        """Animate the pickup."""
+        import math
+        self.bob_offset += self.bob_speed
+        if self.bob_offset >= 360:
+            self.bob_offset = 0.0
+        bob_amount = math.sin(math.radians(self.bob_offset)) * 3
+        self.rect.y = int(self._base_y + bob_amount)
+    
+    def collect(self, player) -> bool:
+        """Try to collect this pickup."""
+        if self.rect.colliderect(player.rect):
+            # Apply damage boost
+            if not hasattr(player, '_damage_boost_end'):
+                player._damage_boost_end = 0
+            player._damage_boost_end = max(player._damage_boost_end, pygame.time.get_ticks() + self.duration * 16)
+            if not hasattr(player, '_damage_multiplier'):
+                player._damage_multiplier = 1.0
+            player._damage_multiplier *= self.damage_multiplier
+            return True
+        return False
+
 

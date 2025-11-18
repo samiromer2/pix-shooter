@@ -20,18 +20,30 @@ class Enemy(pygame.sprite.Sprite):
         sprite = self.anim_controller.get_frame()
         if sprite:
             w, h = sprite.get_size()
-            if w > 64 or h > 80:
-                self._scale_factor = min(64 / w, 80 / h)
+            # Better scaling - maintain aspect ratio, target size around 48x48 to 64x64
+            target_size = 56  # Good size for enemies
+            if w > target_size or h > target_size:
+                self._scale_factor = min(target_size / w, target_size / h)
+            elif w < target_size * 0.7 or h < target_size * 0.7:
+                # Scale up if too small
+                self._scale_factor = max(target_size * 0.8 / w, target_size * 0.8 / h)
             else:
                 self._scale_factor = 1.0
+            
             if self._scale_factor != 1.0:
-                sprite = pygame.transform.scale(sprite, (int(w * self._scale_factor), int(h * self._scale_factor)))
+                new_w = int(w * self._scale_factor)
+                new_h = int(h * self._scale_factor)
+                # Use smoothscale for better quality
+                sprite = pygame.transform.smoothscale(sprite, (new_w, new_h))
+            
+            # Apply red tint to make enemies look more menacing
+            sprite = self._apply_enemy_tint(sprite)
             self.image = sprite
         else:
-            # Fallback placeholder
-            self.image = pygame.Surface((32, 40))
-            self.image.fill((180, 60, 60))
+            # Better fallback placeholder - more detailed
+            self.image = self._create_fallback_sprite()
             self._scale_factor = 1.0
+        
         self.rect = self.image.get_rect(topleft=(x, y))
         self._base_image = self.image.copy()
         self.position = pygame.Vector2(self.rect.x, self.rect.y)
@@ -52,6 +64,44 @@ class Enemy(pygame.sprite.Sprite):
         self.shoot_cooldown_frames = 60  # Frames between shots
         self._shoot_cooldown = 0
         self.player_target = None  # Reference to player when detected
+    
+    def _apply_enemy_tint(self, sprite: pygame.Surface) -> pygame.Surface:
+        """Apply a red/menacing tint to enemy sprite."""
+        # Create a tinted copy
+        tinted = sprite.copy()
+        # Create a red overlay with alpha
+        overlay = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
+        # Red tint (subtle - 20% opacity)
+        overlay.fill((255, 50, 50, 50))
+        tinted.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        return tinted
+    
+    def _create_fallback_sprite(self) -> pygame.Surface:
+        """Create a better-looking fallback sprite."""
+        size = 48
+        sprite = pygame.Surface((size, size), pygame.SRCALPHA)
+        
+        # Body (rounded rectangle)
+        body_rect = pygame.Rect(8, 12, 32, 28)
+        pygame.draw.ellipse(sprite, (200, 60, 60), body_rect)
+        pygame.draw.ellipse(sprite, (150, 40, 40), body_rect, 2)
+        
+        # Head
+        head_rect = pygame.Rect(16, 8, 16, 16)
+        pygame.draw.circle(sprite, (220, 80, 80), (24, 16), 8)
+        pygame.draw.circle(sprite, (150, 40, 40), (24, 16), 8, 2)
+        
+        # Eyes (glowing red)
+        pygame.draw.circle(sprite, (255, 0, 0), (22, 14), 2)
+        pygame.draw.circle(sprite, (255, 0, 0), (26, 14), 2)
+        pygame.draw.circle(sprite, (255, 150, 150), (22, 14), 1)
+        pygame.draw.circle(sprite, (255, 150, 150), (26, 14), 1)
+        
+        # Legs
+        pygame.draw.rect(sprite, (180, 50, 50), (12, 36, 6, 8))
+        pygame.draw.rect(sprite, (180, 50, 50), (30, 36, 6, 8))
+        
+        return sprite
 
     def take_damage(self, amount: int) -> None:
         if amount <= 0:
@@ -199,13 +249,22 @@ class Enemy(pygame.sprite.Sprite):
         
         sprite = self.anim_controller.get_frame()
         if sprite:
+            # Only scale if needed and cache the scaled version
             if self._scale_factor and self._scale_factor != 1.0:
                 w, h = sprite.get_size()
-                sprite = pygame.transform.scale(sprite, (int(w * self._scale_factor), int(h * self._scale_factor)))
+                new_w = int(w * self._scale_factor)
+                new_h = int(h * self._scale_factor)
+                # Only use smoothscale if significantly different size, otherwise use regular scale for performance
+                if abs(new_w - w) > 2 or abs(new_h - h) > 2:
+                    sprite = pygame.transform.smoothscale(sprite, (new_w, new_h))
+                elif new_w != w or new_h != h:
+                    sprite = pygame.transform.scale(sprite, (new_w, new_h))
+            # Apply tint each frame
+            sprite = self._apply_enemy_tint(sprite)
             self._base_image = sprite
         else:
-            self._base_image = pygame.Surface((32, 40))
-            self._base_image.fill((180, 60, 60))
+            # Use fallback sprite
+            self._base_image = self._create_fallback_sprite()
         
         # Flip based on facing
         self.image = pygame.transform.flip(self._base_image, self.facing < 0, False)

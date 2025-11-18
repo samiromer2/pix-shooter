@@ -62,14 +62,12 @@ class Lava(pygame.sprite.Sprite):
         self.width = width
         self.height = height
         
-        # Create lava sprite with animated look
+        # Create lava sprite
         self.image = pygame.Surface((width, height), pygame.SRCALPHA)
         # Base lava color
         self.image.fill((200, 50, 0))
-        # Add glowing effect
-        for i in range(3):
-            glow_rect = pygame.Rect(i * 2, i * 2, width - i * 4, height - i * 4)
-            pygame.draw.rect(self.image, (255, 100 + i * 20, 0), glow_rect, 1)
+        # Add simple border
+        pygame.draw.rect(self.image, (255, 100, 0), (0, 0, width, height), 2)
         
         self.rect = self.image.get_rect(topleft=(x, y))
         self.damage = 1

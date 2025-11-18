@@ -56,6 +56,8 @@ class Animation:
         """Update animation frame based on delta time."""
         if len(self.frames) <= 1:
             return
+        if self.fps <= 0:  # fps=0 means static, don't animate
+            return
         self.elapsed += dt
         if self.elapsed >= self.frame_time:
             self.elapsed = 0.0

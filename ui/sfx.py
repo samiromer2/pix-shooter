@@ -14,10 +14,16 @@ class Sounds:
         self.bgm = None
         self.bgm_path = None
         self._bgm_playing = False
+        
+        # Volume settings (0.0 to 1.0)
+        self.master_volume = 1.0
+        self.sfx_volume = 1.0
+        self.music_volume = 1.0
 
     def play_click(self) -> None:
         if self.click:
             try:
+                self.click.set_volume(self.master_volume * self.sfx_volume)
                 self.click.play()
             except Exception:
                 pass
@@ -25,6 +31,7 @@ class Sounds:
     def play_hover(self) -> None:
         if self.hover:
             try:
+                self.hover.set_volume(self.master_volume * self.sfx_volume)
                 self.hover.play()
             except Exception:
                 pass
@@ -32,6 +39,7 @@ class Sounds:
     def play_shoot(self) -> None:
         if self.shoot:
             try:
+                self.shoot.set_volume(self.master_volume * self.sfx_volume)
                 self.shoot.play()
             except Exception:
                 pass
@@ -39,6 +47,7 @@ class Sounds:
     def play_hit(self) -> None:
         if self.hit:
             try:
+                self.hit.set_volume(self.master_volume * self.sfx_volume)
                 self.hit.play()
             except Exception:
                 pass
@@ -46,9 +55,31 @@ class Sounds:
     def play_explode(self) -> None:
         if self.explode:
             try:
+                self.explode.set_volume(self.master_volume * self.sfx_volume)
                 self.explode.play()
             except Exception:
                 pass
+    
+    def set_master_volume(self, volume: float) -> None:
+        """Set master volume (0.0 to 1.0)."""
+        self.master_volume = max(0.0, min(1.0, volume))
+        self._update_music_volume()
+    
+    def set_sfx_volume(self, volume: float) -> None:
+        """Set sound effects volume (0.0 to 1.0)."""
+        self.sfx_volume = max(0.0, min(1.0, volume))
+    
+    def set_music_volume(self, volume: float) -> None:
+        """Set music volume (0.0 to 1.0)."""
+        self.music_volume = max(0.0, min(1.0, volume))
+        self._update_music_volume()
+    
+    def _update_music_volume(self) -> None:
+        """Update music volume."""
+        try:
+            pygame.mixer.music.set_volume(self.master_volume * self.music_volume)
+        except Exception:
+            pass
 
     def start_bgm(self, loops: int = -1) -> None:
         """Start background music (loops=-1 means infinite loop)."""
@@ -59,6 +90,7 @@ class Sounds:
         if self.bgm_path:
             try:
                 pygame.mixer.music.load(self.bgm_path)
+                self._update_music_volume()
                 pygame.mixer.music.play(loops=loops)
                 self._bgm_playing = True
                 return
@@ -68,6 +100,7 @@ class Sounds:
         # Fallback to Sound object
         if self.bgm and not self._bgm_playing:
             try:
+                self.bgm.set_volume(self.master_volume * self.music_volume)
                 self.bgm.play(loops=loops)
                 self._bgm_playing = True
             except Exception:

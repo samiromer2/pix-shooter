@@ -61,7 +61,7 @@ class Pistol(Weapon):
         bullets_group: pygame.sprite.Group
     ) -> bool:
         """Shoot a single bullet."""
-        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False)
+        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False, damage=self.damage)
         bullets_group.add(bullet)
         return True
 
@@ -100,7 +100,7 @@ class Shotgun(Weapon):
             vy = math.sin(angle_rad) * self.bullet_speed
             
             # Create bullet with custom velocity
-            bullet = Bullet(x, y, direction=direction, speed=abs(vx), is_enemy=False)
+            bullet = Bullet(x, y, direction=direction, speed=abs(vx), is_enemy=False, damage=self.damage)
             # Override bullet's direction-based movement with angle-based
             bullet.direction = 1 if vx >= 0 else -1
             bullet.speed = abs(vx)
@@ -131,7 +131,7 @@ class Laser(Weapon):
         bullets_group: pygame.sprite.Group
     ) -> bool:
         """Shoot a fast laser bullet."""
-        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False)
+        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False, damage=self.damage)
         bullets_group.add(bullet)
         return True
 
@@ -156,8 +156,84 @@ class Rocket(Weapon):
         bullets_group: pygame.sprite.Group
     ) -> bool:
         """Shoot a rocket."""
-        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False)
+        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False, damage=self.damage)
         bullet.is_rocket = True  # Mark as rocket for explosion effect
+        bullets_group.add(bullet)
+        return True
+
+
+class MachineGun(Weapon):
+    """Rapid-fire mining tool."""
+    
+    def __init__(self):
+        super().__init__(
+            name="Rapid Miner",
+            fire_rate=3,  # Very fast fire rate
+            ammo_per_shot=1,
+            damage=1,
+            bullet_speed=12.0
+        )
+    
+    def shoot(
+        self,
+        x: int,
+        y: int,
+        direction: int,
+        bullets_group: pygame.sprite.Group
+    ) -> bool:
+        """Shoot rapid-fire bullets."""
+        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False, damage=self.damage)
+        bullets_group.add(bullet)
+        return True
+
+
+class Sniper(Weapon):
+    """Precise, high-damage mining tool."""
+    
+    def __init__(self):
+        super().__init__(
+            name="Precision Miner",
+            fire_rate=90,  # Very slow fire rate
+            ammo_per_shot=2,  # Expensive
+            damage=3,  # High damage
+            bullet_speed=25.0  # Very fast
+        )
+    
+    def shoot(
+        self,
+        x: int,
+        y: int,
+        direction: int,
+        bullets_group: pygame.sprite.Group
+    ) -> bool:
+        """Shoot a high-damage sniper bullet."""
+        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False, damage=self.damage)
+        bullets_group.add(bullet)
+        return True
+
+
+class GrenadeLauncher(Weapon):
+    """Explosive area-effect weapon."""
+    
+    def __init__(self):
+        super().__init__(
+            name="Explosive Miner",
+            fire_rate=45,
+            ammo_per_shot=2,
+            damage=2,
+            bullet_speed=8.0
+        )
+    
+    def shoot(
+        self,
+        x: int,
+        y: int,
+        direction: int,
+        bullets_group: pygame.sprite.Group
+    ) -> bool:
+        """Shoot an explosive grenade."""
+        bullet = Bullet(x, y, direction=direction, speed=self.bullet_speed, is_enemy=False, damage=self.damage)
+        bullet.is_rocket = True  # Use rocket explosion effect
         bullets_group.add(bullet)
         return True
 

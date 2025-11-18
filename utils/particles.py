@@ -137,6 +137,69 @@ class ParticleSystem:
             color = (255, 255, 100)
             self.add_particle(Particle(x, y, vx, vy, color, lifetime, size, fade=False))
     
+    def create_bullet_trail(
+        self,
+        x: float,
+        y: float,
+        direction: int = 1,
+        color: tuple[int, int, int] = (255, 255, 200),
+        count: int = 3
+    ) -> None:
+        """Create a trail effect behind a bullet."""
+        for _ in range(count):
+            vx = -direction * random.uniform(0.5, 1.5)
+            vy = random.uniform(-0.5, 0.5)
+            lifetime = random.randint(5, 10)
+            size = random.randint(1, 2)
+            self.add_particle(Particle(x, y, vx, vy, color, lifetime, size))
+    
+    def create_impact_sparks(
+        self,
+        x: float,
+        y: float,
+        count: int = 12,
+        color: tuple[int, int, int] = (255, 200, 100)
+    ) -> None:
+        """Create spark particles on impact."""
+        for _ in range(count):
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(1.5, 3.5)
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed - 0.5  # Slight upward
+            lifetime = random.randint(8, 15)
+            size = random.randint(1, 2)
+            self.add_particle(Particle(x, y, vx, vy, color, lifetime, size))
+    
+    def create_big_explosion(
+        self,
+        x: float,
+        y: float,
+        color: tuple[int, int, int] = (255, 150, 0),
+        count: int = 30,
+        speed: float = 5.0
+    ) -> None:
+        """Create a large explosion effect."""
+        # Outer ring
+        for _ in range(count):
+            angle = random.uniform(0, 2 * math.pi)
+            speed_variation = random.uniform(0.5, 1.5) * speed
+            vx = math.cos(angle) * speed_variation
+            vy = math.sin(angle) * speed_variation - 1.5
+            lifetime = random.randint(25, 50)
+            size = random.randint(3, 5)
+            self.add_particle(Particle(x, y, vx, vy, color, lifetime, size))
+        
+        # Inner bright flash
+        for _ in range(count // 2):
+            angle = random.uniform(0, 2 * math.pi)
+            speed_variation = random.uniform(0.3, 0.8) * speed
+            vx = math.cos(angle) * speed_variation
+            vy = math.sin(angle) * speed_variation
+            lifetime = random.randint(10, 20)
+            size = random.randint(4, 6)
+            bright_color = (255, 255, 200)
+            self.add_particle(Particle(x, y, vx, vy, bright_color, lifetime, size, fade=False))
+    
     def update(self) -> None:
         """Update all particles."""
         self.particles = [p for p in self.particles if p.update()]
