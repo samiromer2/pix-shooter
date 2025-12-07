@@ -1,7 +1,7 @@
 {
   "player": {
-    "max_hp": 5,
-    "hp_upgrades": 0,
+    "max_hp": 14,
+    "hp_upgrades": 9,
     "ammo_upgrades": 0,
     "speed_multiplier": 1.0,
     "jump_multiplier": 1.0
@@ -12,12 +12,13 @@
       "level6",
       "level1",
       "level2",
-      "level3"
+      "level3",
+      "level4"
     ],
     "current_level": "level1"
   },
   "currency": {
-    "coins": 1590
+    "coins": 1395
   },
   "scores": {
     "high_scores": {
@@ -25,9 +26,10 @@
       "level6": 830,
       "level1": 660,
       "level2": 885,
-      "level3": 1050
+      "level3": 1050,
+      "level4": 1190
     },
-    "global_high_score": 1050
+    "global_high_score": 1190
   },
   "achievements": [
     "find_bonus_room",
@@ -38,7 +40,10 @@
     "complete_level1",
     "complete_level2",
     "complete_level3",
-    "score_1000"
+    "score_1000",
+    "complete_level4",
+    "boss_no_damage",
+    "complete_all_levels"
   ],
   "settings": {
     "difficulty": "normal",

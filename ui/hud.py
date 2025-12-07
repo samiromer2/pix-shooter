@@ -157,7 +157,6 @@ class HUD:
             
             # Weapon name with icon indicator
             if current_weapon:
-                import settings as S
                 weapon_surf, _ = self.font_small.render(f"Miner: {current_weapon.name}", S.BITCOIN_GOLD)
                 surface.blit(weapon_surf, (10, 85))
                 
