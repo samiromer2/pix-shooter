@@ -32,6 +32,7 @@ from entities.enemy_types import FlyingEnemy, TankEnemy, FastEnemy
 from entities.pickup import SpeedPickup, DamageBoostPickup
 from entities.secret_area import SecretArea, BonusRoom
 from utils.object_pool import BulletPool
+from utils.screenshot import save_screenshot
 
 
 def main() -> None:
@@ -448,6 +449,11 @@ def main() -> None:
                         score = 0
                         state = "start"
             elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F12:
+                    path = save_screenshot(screen, state)
+                    if path:
+                        print(f"[screenshot] saved {path}")
+                    continue
                 if state == "start" and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     state = "level_select"
                     available_levels = get_available_levels()

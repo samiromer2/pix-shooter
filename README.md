@@ -2,6 +2,17 @@
 
 A feature-rich 2D platformer game built with Pygame, featuring Bitcoin-themed mining mechanics, multiple weapons, enemies, and a complete progression system.
 
+## 📸 Screenshots
+
+Drop captures into `assets/screenshots/` and embed them here. Press **F12** in-game at any time to save the current frame to `assets/screenshots/screenshot-<timestamp>-<state>.png`.
+
+<!--
+![Title screen](assets/screenshots/title.png)
+![Gameplay](assets/screenshots/gameplay.png)
+![Boss fight](assets/screenshots/boss.png)
+![Shop](assets/screenshots/shop.png)
+-->
+
 ## 🎮 Features
 
 ### Core Gameplay
@@ -86,6 +97,7 @@ A feature-rich 2D platformer game built with Pygame, featuring Bitcoin-themed mi
 - **Q**: Switch weapon (next)
 - **E**: Switch weapon (previous)
 - **ESC / P**: Pause
+- **F12**: Save a screenshot to `assets/screenshots/`
 
 ### Mouse Controls
 - **Left Click**: Shoot (when in playing state)
@@ -267,6 +279,16 @@ This project is open source. Feel free to modify and distribute.
 Built with:
 - **Pygame-CE**: Game framework
 - **Python**: Programming language
+
+### Art assets
+
+This project uses third-party pixel art assets. Code and game design are mine; the sprites and tilesets below belong to their respective authors:
+
+- **Player character** – "Owlet Monster" by [Pixel Frog](https://pixelfrog-assets.itch.io/) (Monster Creatures Fantasy pack)
+- **Enemy sprites** – Top Down Animals (Farm) pixel art pack by [CraftPix.net](https://craftpix.net/) (`assets/sprites/enemy/craftpix-net-291971-...`)
+- **Tileset** – Undead Top Down Tileset by [CraftPix.net](https://craftpix.net/) (`assets/tiles/craftpix-net-695666-...`)
+
+Refer to each pack's bundled license for usage terms. Replace before redistributing commercially if those licenses require it.
 
 ---
 

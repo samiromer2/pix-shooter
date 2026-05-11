@@ -27,4 +27,9 @@ assets/**/*.xcf
 # Logs
 *.log
 
+# Local game state (should not be committed)
+save_game.json
+
+# PyInstaller build artifacts
+*.spec.bak
 
