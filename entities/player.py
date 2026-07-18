@@ -54,7 +54,7 @@ class Player(pygame.sprite.Sprite):
 
         self.on_ground = False
         self.facing = 1  # 1 right, -1 left
-        self.shoot_cooldown_frames = 10
+        # Shoot cooldown comes from the equipped weapon's fire_rate
         self._cooldown_counter = 0
 
         # Health

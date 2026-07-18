@@ -25,7 +25,7 @@ def teardown_module(module):
 
 def test_shooting_consumes_ammo_and_stops_at_zero():
     p = Player(0, 0)
-    p.shoot_cooldown_frames = 0
+    p.get_current_weapon().fire_rate = 0
     bullets = pygame.sprite.Group()
     shots_attempted = p.mag_capacity + 5
     for _ in range(shots_attempted):

@@ -7,9 +7,29 @@ import pygame
 from utils.animations import load_animation_sequence, Animation, AnimationController, load_image as load_image_from_anim
 
 
+# Craftpix farm-animal sheets are a 6-column x 8-row grid:
+#   rows 0-3: walk down/up/left/right (6 frames)
+#   rows 4-7: idle down/up/left/right (4 frames, trailing cells empty)
+# Enemy.update() flips the image for facing < 0, so load right-facing rows.
+FARM_GRID_COLS = 6
+FARM_GRID_ROWS = 8
+FARM_WALK_RIGHT_ROW = 3
+FARM_IDLE_RIGHT_ROW = 7
+
+
+def _extract_row_frames(img: pygame.Surface, row: int, frame_w: int, frame_h: int) -> list[pygame.Surface]:
+    """Extract non-empty frames from one row of a sprite sheet grid."""
+    frames = []
+    for col in range(img.get_width() // frame_w):
+        frame = img.subsurface((col * frame_w, row * frame_h, frame_w, frame_h))
+        if frame.get_bounding_rect().width > 0:
+            frames.append(frame)
+    return frames
+
+
 class SpriteLoader:
     """Loads and manages sprite assets with animation support."""
-    
+
     def __init__(self) -> None:
         self.base_path = Path("assets/sprites")
         self.player_animations: dict[str, Animation] = {}
@@ -66,7 +86,7 @@ class SpriteLoader:
             for loc in possible_locations:
                 if not loc.exists():
                     continue
-                
+
                 # Try to find enemy animation files for each type
                 for enemy_type in enemy_types:
                     # Try with shadow first (looks better)
@@ -75,63 +95,39 @@ class SpriteLoader:
                         anim_file = loc / f"{enemy_type}_animation_without_shadow.png"
                     if not anim_file.exists():
                         anim_file = loc / f"{enemy_type}_animation.png"
-                    
-                    if anim_file.exists():
-                        img = load_image_from_anim(anim_file)
-                        if img:
-                            w, h = img.get_size()
-                            # Try to detect frame size - common sizes: 128x128, 96x96, 64x64
-                            frame_size = None
-                            for size in [128, 96, 64, 48, 32]:
-                                if w % size == 0 and h % size == 0:
-                                    cols = w // size
-                                    rows = h // size
-                                    # Likely animation: should have multiple columns (directions) and rows (frames)
-                                    if cols >= 3 and rows >= 2:
-                                        frame_size = size
-                                        break
-                            
-                            idle_frames = []
-                            walk_frames = []
-                            
-                            if frame_size:
-                                from utils.animations import split_sprite_sheet
-                                all_frames = split_sprite_sheet(img, frame_size, frame_size)
-                                # Animation spritesheets typically have 4 directions (front, back, left, right)
-                                # and multiple frames per direction
-                                # Use only ONE frame for idle (first frame), and cycle through walk frames
-                                if len(all_frames) >= 4:
-                                    # Idle: use only the first frame (single frame, no animation)
-                                    idle_frames = [all_frames[0]]
-                                    # Walk: use frames 1-4 (or available frames) for walking animation
-                                    walk_frames = all_frames[1:5] if len(all_frames) >= 5 else all_frames[1:] if len(all_frames) > 1 else [all_frames[0]]
-                                elif len(all_frames) >= 2:
-                                    # If only 2-3 frames, use first for idle, rest for walk
-                                    idle_frames = [all_frames[0]]
-                                    walk_frames = all_frames[1:]
-                                else:
-                                    # Single frame - use for both
-                                    idle_frames = [all_frames[0]]
-                                    walk_frames = [all_frames[0]]
-                            else:
-                                # Single frame or couldn't detect, use as is
-                                idle_frames = [img]
-                                walk_frames = [img]
-                            
-                            # Add this enemy type's animations
-                            enemy_anims = {}
-                            if idle_frames:
-                                # Idle: Use only the FIRST frame, no animation (fps=0 means no update)
-                                enemy_anims["idle"] = Animation([idle_frames[0]], fps=0.0)  # fps=0 = static, no animation
-                            if walk_frames:
-                                # Walk: Use frames for animation
-                                enemy_anims["walk"] = Animation(walk_frames, fps=6.0)
-                            
-                            if enemy_anims:
-                                self.enemy_types.append(enemy_anims)
-                                # Also use first loaded as default
-                                if not self.enemy_animations:
-                                    self.enemy_animations = enemy_anims.copy()
+
+                    if not anim_file.exists():
+                        continue
+                    img = load_image_from_anim(anim_file)
+                    if not img:
+                        continue
+                    w, h = img.get_size()
+                    if w % FARM_GRID_COLS != 0 or h % FARM_GRID_ROWS != 0:
+                        continue
+                    frame_w = w // FARM_GRID_COLS
+                    frame_h = h // FARM_GRID_ROWS
+
+                    walk_frames = _extract_row_frames(img, FARM_WALK_RIGHT_ROW, frame_w, frame_h)
+                    idle_frames = _extract_row_frames(img, FARM_IDLE_RIGHT_ROW, frame_w, frame_h)
+                    if not walk_frames:
+                        continue
+                    if not idle_frames:
+                        idle_frames = [walk_frames[0]]
+
+                    enemy_anims = {
+                        # Idle: single static frame (fps=0 = no animation)
+                        "idle": Animation([idle_frames[0]], fps=0.0),
+                        "walk": Animation(walk_frames, fps=6.0),
+                    }
+                    self.enemy_types.append(enemy_anims)
+                    # Also use first loaded as default
+                    if not self.enemy_animations:
+                        self.enemy_animations = enemy_anims.copy()
+
+                # Stop after the first folder that yields sprites - the other
+                # locations hold the same animals and would create duplicates
+                if self.enemy_types:
+                    break
             
             # If we loaded multiple enemy types but no default, use first
             if not self.enemy_animations and self.enemy_types:

@@ -49,7 +49,7 @@ def test_player_shoot_spawns_bullet_and_respects_cooldown():
     assert len(bullets.sprites()) == 1
 
     # After enough updates, can shoot again
-    for _ in range(player.shoot_cooldown_frames):
+    for _ in range(player.get_current_weapon().fire_rate):
         player.update(KeyState())
     assert player.can_shoot() is True
     player.shoot(bullets)

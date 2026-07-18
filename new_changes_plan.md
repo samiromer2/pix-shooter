@@ -6,7 +6,7 @@ Current state: ~6k lines across `entities/`, `levels/`, `ui/`, `utils/`, plus a
 
 ---
 
-## 1. Fix the failing test (quick win)
+## 1. Fix the failing test (quick win) — ✅ DONE (2026-07-18)
 
 `tests/test_ammo.py::test_shooting_consumes_ammo_and_stops_at_zero` fails
 (2 bullets spawned instead of 10).
@@ -20,7 +20,7 @@ one shot fires every 10 loop iterations.
 (`p.get_current_weapon().fire_rate = 0`), and remove the now-dead
 `shoot_cooldown_frames` attribute from `Player` so the API can't mislead again.
 
-## 2. Fix enemy sprite-strip splitting (visual bug, high priority)
+## 2. Fix enemy sprite-strip splitting (visual bug, high priority) — ✅ DONE (2026-07-18)
 
 Verified by running `SpriteLoader` headless and inspecting the sheets: the
 farm-animal enemy sheets are laid out as a **6-column × 8-row grid of 32×32
